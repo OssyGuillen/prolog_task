@@ -1,10 +1,16 @@
-%    I0 P1 P0 *
-%       P3 P2
-% ____________
-% P6 I1 P5 P4 +
-% P8 I2 P7
-% ____________
-% I4 I3 P9 P4
+% Universidad Simón Bolívar
+% Departamento de Computación y Tecnología de la Información
+% CI3661 - Laboratorio de Lenguajes de Programación I
+% Trimestre Enero - Marzo 2016.
+% 
+% Tarea Prolog.
+%
+% Pares e Impares.
+%  
+% Autores:          Gabriel Iglesias 11-10476.
+%                   Oscar Guillen    11-11264.
+% Grupo:     		G16
+% Última edición: 	11 de marzo de 2016.
 
 pei :-
 
@@ -70,6 +76,7 @@ pei :-
 	printSolution(IPP, PP, PIPP, PIP, IIPP).
 
 printSolution(IPP, PP, PIPP, PIP, IIPP) :-
+	nl,
 	write('   '),    
 	write(IPP),
     write(' *'),
