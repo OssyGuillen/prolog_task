@@ -133,5 +133,5 @@ printSolution(IPP, PP, PIPP, PIP, IIPP) :-
 % @param List    lista de valores que pueden unificarse con las variables de 
 %                la lista [H | T]
 
-assign([], List).
+assign([], _List).
 assign([H | T], List) :- member(H, List), assign(T, List).
