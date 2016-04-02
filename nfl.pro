@@ -1,3 +1,7 @@
+:- dynamic(date/3).
+:- dynamic(bye/2).
+:- dynamic(divMatch/2).
+
 standings(afc,east,1,patriots).
 standings(afc,east,2,jets).
 standings(afc,east,3,bills).
@@ -49,6 +53,9 @@ inter(north,east).
 inter(south,north).
 inter(west,south).
 
+findRivInter(afc,X,Y) :- inter(X,Y).
+findRivInter(nfc,X,Y) :- inter(Y,X).
+
 teams(X) :- findall(Team,standings(_,_,_,Team),X).
 
 % Arreglar esto.
@@ -70,22 +77,16 @@ rivals(Team,LR) :- standings(C,D,P,Team),
 				divisionMatches(Team,Div,DivMatches),
 				intra(D,IntraDiv), findall(Rival2,(standings(C,IntraDiv,_,Rival2)),Intra),
 				intraInterMatches(Team,Intra,IntraMatches),
-				(C == afc -> 
-					inter(D,InterDiv),
-					findall(Rival3,
-							standings(nfc,InterDiv,_,Rival3),Inter
-							);
-					inter(InterDiv,D),
-					findall(Rival3,
-							standings(afc,InterDiv,_,Rival3),Inter
-							)
+				append(DivMatches,IntraMatches,A),
+				findRivInter(C,D,InterDiv),
+				findall(Rival3,
+						standings(C,InterDiv,_,Rival3),Inter
 				),
 				intraInterMatches(Team,Inter,InterMatches),
+        		append(A,InterMatches,B),
 				findall(Rival4,(standings(C,PDiv,P,Rival4),PDiv \== D,PDiv \== IntraDiv),SamePos),
 				samePosMatches(Team,SamePos,PosMatches),
-				append(DivMatches,IntraMatches,A),
-        		append(A,InterMatches,B),
-        		append(B,PosMatches,LR), !.
+        		append(B,PosMatches,LR).
 
 
 
@@ -94,10 +95,73 @@ divisionMatches(Team,Teams,Matches) :- divisionMatches(Team,Teams,Matches,[]).
 divisionMatches(T,[],M,M).
 divisionMatches(T,[X|XS],M,ACC) :- divisionMatches(T,XS,M,[(T,X),(X,T)|ACC]).
 
-intraInterMatches(Team,Teams,Matches) :- intraInterMatches(Team,Teams,Matches,[]).
-intraInterMatches(T,[],M,M).
-intraInterMatches(T,[R1,R2],Matches,ACC) :- intraInterMatches(T,[],Matches,[(R1,T),(R2,T)|ACC]).
-intraInterMatches(T,[R1,R2|XS],Matches,ACC) :- intraInterMatches(T,XS,Matches,[(T,R1),(T,R2)|ACC]).
+intraInterMatches(Team,Teams,Matches) :- selectn(2,[R1,R2],Teams,A),
+										 selectn(2,[R3,R4],A,Y),
+										 Matches = [(Team,R1),(Team,R2),(R3,Team),(R4,Team)].
 
-samePosMatches(Team,[R1,R2],[(Team,R1),(R2,Team)]).
+samePosMatches(Team,Teams,Matches) :- select(R1,Teams,R),
+									  select(R2,R,Y),
+									  Matches = [(Team,R1),(R2,Team)].
 
+
+
+
+genByes([],_).
+genByes([X|Xs],N) :- asserta(bye(N,X)), N1 is N + 1, genByes(Xs,N1).
+
+printDates(18) :- !.
+printDates(N) :- write('Week '),write(N),nl,
+			write('---------'),nl,
+			findall((V,L),date(N,V,L),Ms),
+			printTeams(Ms), nl,
+			printBye(N),nl,
+			M is N + 1,
+			printDates(M).
+
+printBye(N) :- N < 9, bye(N,Bye), write('Bye: '), write(Bye), nl, nl.
+printBye(N).
+
+printTeams([]).
+printTeams([(V,L)|Xs]) :- write(V), write(' at '), write(L),nl,printTeams(Xs).
+
+genWeeks([]).
+genWeeks(Teams):-
+	select(T1,Teams,Rest),
+	asserta(divMatch(T1,3)),
+	rivals(T1,L),
+	addDate(17,L),
+	genWeeks(Rest).
+				
+addDate(0,_).
+addDate(N,R) :- between(14,17,N),
+				select((E1,E2),R,Rest),
+				\+date(N,E1,_), \+date(N,_,E1), \+date(N,E2,_), \+date(N,_,E2),
+				verifyDivMatch(E1,E2),
+				asserta(date(N,E1,E2)),
+				M is N - 1,
+				addDate(M,Rest).
+addDate(N,R) :- select((E1,E2),R,Rest),
+				\+date(N,E1,_), \+date(N,_,E1), \+date(N,E2,_), \+date(N,_,E2),
+				verifyByes(N,E1,E2),
+				asserta(date(N,E1,E2)),
+				M is N - 1,
+				addDate(M,Rest).
+addDate(N,R) :- M is N - 1,
+				addDate(M,R).
+
+verifyByes(N,E1,E2) :- N < 9, bye(N,Bye), \+member(E1,Bye), \+member(E2,Bye).
+verifyByes(N,E1,E2) :- N > 8.
+
+verifyDivMatch(E1,E2):- divMatch(E1,0), divMatch(E2,0).
+verifyDivMatch(E1,E2):- standings(C,D,_,E1), standings(C,D,_,E2),
+						divMatch(E1,N1), M1 is N1 - 1,
+						divMatch(E2,N2), M2 is N2 - 1,
+						asserta(divMatch(E1,M1)),
+						asserta(divMatch(E2,M2)).
+
+schedule :- findall(T,standings(_,_,_,T),Teams),
+			byes(Z),
+			genByes(Z,1),
+			genWeeks(Teams),
+			printDates(1),
+			retractall(date(_,_,_)).
